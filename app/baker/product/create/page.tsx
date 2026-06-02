@@ -14,7 +14,7 @@ export default function CreateProductPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [currentRole, setCurrentRole] = useState("admin");
+  const [currentRole, setCurrentRole] = useState("baker");
 
   // State Form komponen input
   const [name, setName] = useState("");
@@ -24,17 +24,17 @@ export default function CreateProductPage() {
   const [description, setDescription] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
 
-  // 🌍 Menggunakan konstanta global env pilihanmu
-  const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
-
   useEffect(() => {
-    const role = localStorage.getItem("userRole")?.toLowerCase() || "admin";
+    const role = localStorage.getItem("role")?.toLowerCase() || "baker";
     setCurrentRole(role);
 
     async function fetchCategories() {
       try {
-        const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
-        const response = await fetch(`${BASE_URL}/categories`, {
+        // Ambil token dari penyimpanan browser untuk Authorization
+        const token = localStorage.getItem("accessToken");
+        
+        // Menggunakan process.env.NEXT_PUBLIC_BASE_URL sesuai file .env kamu
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/categories`, {
           method: "GET",
           headers: {
             "Authorization": `Bearer ${token}`
@@ -51,13 +51,13 @@ export default function CreateProductPage() {
     }
     
     fetchCategories();
-  }, [BASE_URL]);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
 
-    const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
+    const token = localStorage.getItem("accessToken");
     if (!token) {
       toast.error("Sesi Anda habis. Silakan login ulang!");
       router.push("/login");
@@ -77,18 +77,24 @@ export default function CreateProductPage() {
         formData.append("image", imageFile);
       }
 
+      // ==========================================
+      // 🎯 SOLUSI JITU UNTUK NUMERIC STRING
+      // ==========================================
       const cleanCategoryId = categoryId.toString().replace(/[^0-9]/g, "");
-      if (!cleanCategoryId) {
-        toast.error("Silakan pilih kategori terlebih dahulu");
-        setLoading(false);
-        return;
-      }
-      formData.append("categoryId", cleanCategoryId);
 
-      const response = await fetch(`${BASE_URL}/products`, {
+      if (!cleanCategoryId || cleanCategoryId === "") {
+        formData.append("categoryId", "1");
+      } else {
+        formData.append("categoryId", cleanCategoryId);
+      }
+      // ==========================================
+
+      // Pemanggilan fetch POST menggunakan process.env resmi dan Authorization Token
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/products`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`
+          // Penggunaan FormData otomatis mengatur Content-Type Multipart, jangan tulis manual di sini
         },
         body: formData,
       });
@@ -126,7 +132,7 @@ export default function CreateProductPage() {
             <input
               type="text"
               required
-              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl bg-white text-slate-900"
+              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none transition"
               placeholder="Contoh: Cheese Cake Strawberry"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -140,7 +146,7 @@ export default function CreateProductPage() {
                 type="number"
                 required
                 min="0"
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl bg-white text-slate-900"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none transition"
                 placeholder="30000"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
@@ -152,7 +158,7 @@ export default function CreateProductPage() {
                 type="number"
                 required
                 min="0"
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl bg-white text-slate-900"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none transition"
                 placeholder="10"
                 value={stock}
                 onChange={(e) => setStock(e.target.value)}
@@ -164,7 +170,7 @@ export default function CreateProductPage() {
             <label className="block text-sm font-semibold text-slate-700 mb-1">Kategori Produk</label>
             <select
               required
-              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl bg-white text-slate-900"
+              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none transition"
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
             >
@@ -182,7 +188,7 @@ export default function CreateProductPage() {
             <textarea
               required
               rows={3}
-              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl bg-white text-slate-900"
+              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl bg-white text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none transition"
               placeholder="Jelaskan detail produk..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -194,8 +200,7 @@ export default function CreateProductPage() {
             <input
               type="file"
               accept="image/*"
-              required
-              className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 file:cursor-pointer"
               onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)}
             />
           </div>
@@ -203,7 +208,7 @@ export default function CreateProductPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition disabled:bg-blue-300"
+            className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition disabled:bg-blue-300 disabled:cursor-not-allowed text-sm shadow-md"
           >
             {loading ? "Sedang Mengirim ke Server..." : "Simpan Produk Baru"}
           </button>

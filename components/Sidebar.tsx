@@ -13,7 +13,6 @@ interface MenuItem {
 interface SidebarProps {
   isOpenMobile?: boolean;
   setIsOpenMobile?: (open: boolean) => void;
-  // 🎯 Tambahan kendali ciut dari layout utama
   isCollapsed?: boolean;
   setIsCollapsed?: (collapsed: boolean) => void;
 }
@@ -46,6 +45,7 @@ export default function Sidebar({ isOpenMobile, setIsOpenMobile, isCollapsed = f
       { title: "Dashboard", subtitle: "Ringkasan baker", slug: "/baker/dashboard" },
       { title: "Products", subtitle: "Kelola kue", slug: "/baker/product" },
       { title: "Orders", subtitle: "Semua pesanan", slug: "/baker/orders" },
+      { title: "Reports", subtitle: "Laporan baker", slug: "/baker/reports" },
     ],
     customer: [
       { title: "Etalase", subtitle: "Lihat semua kue", slug: "/customer/dashboard" },
@@ -56,9 +56,10 @@ export default function Sidebar({ isOpenMobile, setIsOpenMobile, isCollapsed = f
   const menuAktif = menuConfig[role] || menuConfig["customer"];
 
   return (
-    <aside className="relative flex flex-col justify-between h-screen bg-white border-r border-slate-100 shrink-0 h-full w-full">
+    // 🛠️ FIX UTAMA: Menambahkan 'fixed' untuk mobile & 'lg:relative' untuk desktop, serta 'z-50 top-0 left-0' agar mengunci di atas layar
+    <aside className="fixed lg:relative inset-y-0 left-0 z-50 flex flex-col justify-between h-screen bg-white border-r border-slate-100 shrink-0 w-full">
       
-      {/* 🎯 Tombol ciut/lebar desktop: Sekarang memicu state milik layout induk */}
+      {/* Tombol ciut/lebar desktop */}
       <button
         onClick={() => setIsCollapsed?.(!isCollapsed)}
         className="absolute -right-3 top-7 z-50 w-6 h-6 rounded-full bg-white border border-slate-200 shadow-sm hidden lg:flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"
@@ -69,21 +70,22 @@ export default function Sidebar({ isOpenMobile, setIsOpenMobile, isCollapsed = f
         </span>
       </button>
 
-      {/* Tombol X di HP */}
+      {/* 🛠️ Tombol X di HP: Ditambahkan z-50 agar selalu berada di paling depan */}
       {setIsOpenMobile && (
         <button
           onClick={() => setIsOpenMobile(false)}
-          className="absolute right-3 top-4 lg:hidden w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-600 font-bold text-xs"
+          className="absolute right-3 top-4 lg:hidden w-7 h-7 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-600 font-bold text-xs z-50"
         >
           ✕
         </button>
       )}
 
-      <div className="flex flex-col overflow-hidden">
+      {/* Konten Atas Wrapper */}
+      <div className="flex flex-col h-full overflow-hidden">
         {/* Header Brand */}
         <div className={`border-b border-slate-100 transition-all duration-300 ${isCollapsed ? "px-3 py-4" : "px-5 py-5"}`}>
           {isCollapsed ? (
-            <div className="w-8 h-8 rounded-lg bg-amber-400 flex items-center justify-center mx-auto">
+            <div className="w-8 h-8 rounded-lg bg-sky-400 flex items-center justify-center mx-auto">
               <span className="text-white text-xs font-black">D</span>
             </div>
           ) : (
@@ -96,8 +98,8 @@ export default function Sidebar({ isOpenMobile, setIsOpenMobile, isCollapsed = f
           )}
         </div>
 
-        {/* Menu Items */}
-        <nav className={`flex flex-col gap-0.5 py-3 transition-all duration-300 ${isCollapsed ? "px-2" : "px-3"}`}>
+        {/* 🛠️ Menu Items: Ditambahkan 'overflow-y-auto' dan 'flex-1' agar area ini saja yang bisa di-scroll jika menu terlalu panjang */}
+        <nav className={`flex-1 overflow-y-auto flex flex-col gap-0.5 py-3 transition-all duration-300 ${isCollapsed ? "px-2" : "px-3"}`}>
           {!isCollapsed && (
             <span className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-300">
               Navigasi
@@ -118,16 +120,16 @@ export default function Sidebar({ isOpenMobile, setIsOpenMobile, isCollapsed = f
                 className={`
                   group relative flex flex-col rounded-lg transition-all duration-150 
                   ${isCollapsed ? "items-center py-3 px-1" : "px-3 py-2.5"} 
-                  ${isActive ? "bg-amber-50 text-amber-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"}
+                  ${isActive ? "bg-sky-50 text-sky-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"}
                 `}
               >
                 {isActive && !isCollapsed && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-amber-400 rounded-r-full" />
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-sky-400 rounded-r-full" />
                 )}
 
                 {isCollapsed ? (
                   <>
-                    <span className={`text-xs font-bold ${isActive ? "text-amber-600" : "text-slate-400 group-hover:text-slate-600"}`}>
+                    <span className={`text-xs font-bold ${isActive ? "text-sky-600" : "text-slate-400 group-hover:text-slate-600"}`}>
                       {item.title.slice(0, 2).toUpperCase()}
                     </span>
                     <span className="pointer-events-none absolute left-full ml-3 px-2.5 py-1.5 bg-slate-800 text-white text-xs font-medium rounded-md whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-150 shadow-lg z-50">
@@ -136,10 +138,10 @@ export default function Sidebar({ isOpenMobile, setIsOpenMobile, isCollapsed = f
                   </>
                 ) : (
                   <>
-                    <span className={`text-sm font-semibold leading-tight ${isActive ? "text-amber-700" : ""}`}>
+                    <span className={`text-sm font-semibold leading-tight ${isActive ? "text-sky-700" : ""}`}>
                       {item.title}
                     </span>
-                    <span className={`text-[11px] mt-0.5 ${isActive ? "text-amber-500" : "text-slate-400"}`}>
+                    <span className={`text-[11px] mt-0.5 ${isActive ? "text-sky-500" : "text-slate-400"}`}>
                       {item.subtitle}
                     </span>
                   </>
@@ -151,7 +153,7 @@ export default function Sidebar({ isOpenMobile, setIsOpenMobile, isCollapsed = f
       </div>
 
       {/* Logout Button */}
-      <div className={`border-t border-slate-100 py-3 transition-all duration-300 ${isCollapsed ? "px-2" : "px-3"}`}>
+      <div className={`border-t border-slate-100 py-3 bg-white transition-all duration-300 ${isCollapsed ? "px-2" : "px-3"}`}>
         <button
           onClick={handleLogout}
           title={isCollapsed ? "Keluar" : undefined}

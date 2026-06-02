@@ -1,50 +1,90 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 interface User {
-  id: number;
+  id: number | string;
   name: string;
   email: string;
   role: string;
 }
 
 export default function AdminUsersPage() {
+  const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // Simulasi ambil data atau silakan hubungkan dengan fetch API Railway kamu
-  useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        // Ganti URL dengan endpoint asli backend kamu jika sudah siap
-        // const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/admin/users`);
-        // const data = await res.json();
-        
-        // Data sementara biar tampilan langsung muncul rapi:
-        const dummyData: User[] = [
-          { id: 1, name: "Agnes", email: "agnes@gmail.com", role: "CUSTOMER" },
-          { id: 2, name: "Mala", email: "mala@gmail.com", role: "BAKER" },
-          { id: 3, name: "Baker DailyBake", email: "baker@dailybake.com", role: "BAKER" },
-          { id: 4, name: "coulava", email: "ody@gmail.com", role: "CUSTOMER" },
-        ];
-        setUsers(dummyData);
-      } catch (error) {
-        console.error("Gagal memuat data pengguna:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // 1. FUNGSI AMBIL DATA (FETCH USERS)
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
 
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/users`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      const responseData = await res.json();
+
+      if (res.ok) {
+        const actualData = responseData.data || responseData;
+        setUsers(Array.isArray(actualData) ? actualData : []);
+      } else {
+        toast.error(responseData.message || "Gagal menyinkronkan data pengguna.");
+      }
+    } catch (error) {
+      console.error("Gagal memuat data pengguna:", error);
+      toast.error("Terjadi masalah jaringan saat menghubungi database.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchUsers();
   }, []);
+
+  // 2. FUNGSI HAPUS USER (DELETE USER)
+  const handleDeleteUser = async (id: number | string, name: string) => {
+    if (!confirm(`Apakah Anda yakin ingin menghapus pengguna "${name}"?`)) return;
+
+    try {
+      const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/users/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      const responseData = await res.json().catch(() => ({}));
+
+      if (res.ok) {
+        toast.success(`Akun ${name} berhasil dihapus!`);
+        fetchUsers(); // Refresh data biar berkurang jadi 10 orang
+      } else {
+        toast.error(responseData.message || "Gagal menghapus pengguna dari database.");
+      }
+    } catch (error) {
+      console.error("Error delete user:", error);
+      toast.error("Terjadi kesalahan sistem saat menghapus user.");
+    }
+  };
 
   // Filter pencarian berdasarkan nama atau email
   const filteredUsers = users.filter(
     (user) =>
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+      (user.name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+      (user.email?.toLowerCase() || "").includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -53,7 +93,7 @@ export default function AdminUsersPage() {
       <div>
         <h1 className="text-2xl font-black text-slate-800 tracking-tight">Manajemen Pengguna</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Kelola peran hak akses akun staf Dapur Baker, Admin, dan Customer.
+          Kelola peran hak akses akun staf Dapur Baker, Admin, dan Customer (Total terdeteksi: {users.length} akun).
         </p>
       </div>
 
@@ -64,7 +104,7 @@ export default function AdminUsersPage() {
           placeholder="Cari nama atau email..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full sm:w-72 px-4 py-2 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400 transition-all"
+          className="w-full sm:w-72 px-4 py-2 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-400/20 focus:border-sky-400 transition-all"
         />
       </div>
 
@@ -84,7 +124,7 @@ export default function AdminUsersPage() {
               {loading ? (
                 <tr>
                   <td colSpan={4} className="px-6 py-8 text-center text-slate-400">
-                    Memuat data pengguna...
+                    Memuat data pengguna dari database...
                   </td>
                 </tr>
               ) : filteredUsers.length === 0 ? (
@@ -96,15 +136,15 @@ export default function AdminUsersPage() {
               ) : (
                 filteredUsers.map((user) => (
                   <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4 font-bold text-slate-800">{user.name}</td>
+                    <td className="px-6 py-4 font-bold text-slate-800">{user.name || "-"}</td>
                     <td className="px-6 py-4 text-slate-500">{user.email}</td>
                     <td className="px-6 py-4">
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider ${
-                          user.role === "ADMIN"
+                          user.role?.toUpperCase() === "ADMIN"
                             ? "bg-purple-50 text-purple-700"
-                            : user.role === "BAKER"
-                            ? "bg-amber-50 text-amber-700"
+                            : user.role?.toUpperCase() === "BAKER"
+                            ? "bg-sky-50 text-sky-700"
                             : "bg-blue-50 text-blue-700"
                         }`}
                       >
@@ -113,18 +153,19 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-2">
-                        {/* Tombol Edit */}
+                        {/* 🎯 FIXED TOMBOL EDIT: Pindah ke rute form edit user */}
                         <button 
-                          onClick={() => alert(`Edit ${user.name}`)}
-                          className="p-1.5 rounded-md border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all"
+                          onClick={() => router.push(`/admin/users/edit/${user.id}`)}
+                          className="p-1.5 rounded-md border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50 transition-all cursor-pointer"
                           title="Ubah Data"
                         >
                           📝
                         </button>
-                        {/* Tombol Hapus */}
+                        
+                        {/* 🎯 FIXED TOMBOL HAPUS: Menjalankan fungsi API DELETE */}
                         <button 
-                          onClick={() => alert(`Hapus ${user.name}`)}
-                          className="p-1.5 rounded-md border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-all"
+                          onClick={() => handleDeleteUser(user.id, user.name || "User")}
+                          className="p-1.5 rounded-md border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-all cursor-pointer"
                           title="Hapus Pengguna"
                         >
                           🗑️

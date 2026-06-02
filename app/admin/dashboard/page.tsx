@@ -101,7 +101,7 @@ export default function AdminDashboard() {
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
           <span className="text-sm font-medium text-gray-400 uppercase tracking-wider">Status Akses API</span>
           <h3 className="mt-2 text-2xl font-bold">
-            {apiStatus === "LOADING" && <span className="text-amber-500 animate-pulse">Checking...</span>}
+            {apiStatus === "LOADING" && <span className="text-sky-500 animate-pulse">Checking...</span>}
             {apiStatus === "CONNECTED" && <span className="text-green-500">Connected</span>}
             {apiStatus === "DISCONNECTED" && <span className="text-red-500">Auth Required</span>}
           </h3>
@@ -141,7 +141,7 @@ export default function AdminDashboard() {
                     <td className="py-3 text-center">
                       <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
                         user.role?.toUpperCase() === "ADMIN" ? "bg-rose-50 text-rose-600" :
-                        user.role?.toUpperCase() === "BAKER" ? "bg-amber-50 text-amber-600" :
+                        user.role?.toUpperCase() === "BAKER" ? "bg-sky-50 text-sky-600" :
                         "bg-blue-50 text-blue-600"
                       }`}>
                         {user.role?.toUpperCase() || "CUSTOMER"}

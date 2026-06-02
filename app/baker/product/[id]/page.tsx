@@ -19,7 +19,6 @@ export default function EditProductPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [currentRole, setCurrentRole] = useState("admin");
 
-  // State Form untuk menampung data lama & data baru
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
@@ -27,7 +26,6 @@ export default function EditProductPage() {
   const [description, setDescription] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
 
-  // 🌍 Menggunakan konstanta global env pilihanmu agar seragam
   const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
 
   useEffect(() => {
@@ -47,7 +45,7 @@ export default function EditProductPage() {
           setCategories(responseData.data || responseData || []);
         }
       } catch (err) {
-        console.error("Gagal mengambil data kategori:", err);
+        console.error(err);
       }
     }
 
@@ -59,23 +57,16 @@ export default function EditProductPage() {
           headers: { "Authorization": `Bearer ${token}` }
         });
         const result = await response.json();
-        
         if (response.ok && result.data) {
           const product = result.data;
           setName(product.name || "");
           setPrice(product.price?.toString() || "");
           setStock(product.stock?.toString() || "");
-          
-          if (product.category && typeof product.category === "object") {
-            setCategoryId(product.category.id?.toString() || "");
-          } else {
-            setCategoryId(product.categoryId?.toString() || "");
-          }
-          
+          setCategoryId(product.category?.id?.toString() || product.categoryId?.toString() || "");
           setDescription(product.description || "");
         }
       } catch (err) {
-        console.error("Gagal mengambil detail produk:", err);
+        console.error(err);
       }
     }
     
@@ -90,12 +81,6 @@ export default function EditProductPage() {
     setLoading(true);
 
     const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
-    if (!token) {
-      toast.error("Sesi Anda habis. Silakan login ulang!");
-      router.push("/login");
-      setLoading(false);
-      return;
-    }
 
     try {
       const formData = new FormData();
@@ -109,16 +94,15 @@ export default function EditProductPage() {
         formData.append("image", imageFile);
       }
 
+      // 🎯 SOLUSI JITU: Dibuat Number murni bertipe data Integer sebelum dikirim agar tidak eror PATCH 500
       const cleanCategoryId = categoryId.toString().replace(/[^0-9]/g, "");
       if (cleanCategoryId) {
-        formData.append("categoryId", cleanCategoryId); 
+        formData.append("categoryId", Number(cleanCategoryId).toString()); 
       }
 
       const response = await fetch(`${BASE_URL}/products/${id}`, {
         method: "PATCH",
-        headers: {
-          "Authorization": `Bearer ${token}`
-        },
+        headers: { "Authorization": `Bearer ${token}` },
         body: formData,
       });
 
@@ -132,8 +116,8 @@ export default function EditProductPage() {
         toast.error(errorMessage || "Gagal memperbarui produk.");
       }
     } catch (error) {
-      console.error("Error saat memperbarui produk:", error);
-      toast.error("Terjadi kesalahan jaringan atau server.");
+      console.error(error);
+      toast.error("Terjadi error koneksi server.");
     } finally {
       setLoading(false);
     }
@@ -143,43 +127,37 @@ export default function EditProductPage() {
     <div className="p-6 bg-white min-h-screen text-slate-800">
       <div className="max-w-2xl mx-auto">
         <div className="mb-6">
-          <Link href={`/${currentRole}/product`} className="text-blue-600 text-sm hover:underline flex items-center gap-1">
+          <Link href={`/${currentRole}/product`} className="text-blue-600 text-sm hover:underline">
             ← Kembali ke Daftar Produk
           </Link>
-          <h1 className="text-2xl font-bold text-slate-900 mt-2">Edit / Update Produk ({currentRole.toUpperCase()})</h1>
+          <h1 className="text-2xl font-bold text-slate-900 mt-2">Edit Produk</h1>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5 bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-sm">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Nama Kue / Produk</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Nama Kue</label>
             <input
-              type="text"
-              required
-              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl bg-white text-slate-900"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              type="text" required
+              className="w-full px-4 py-2.5 border rounded-xl bg-white text-slate-900"
+              value={name} onChange={(e) => setName(e.target.value)}
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">Harga (Rp)</label>
               <input
-                type="number"
-                required
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl bg-white text-slate-900"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
+                type="number" required
+                className="w-full px-4 py-2.5 border rounded-xl bg-white text-slate-900"
+                value={price} onChange={(e) => setPrice(e.target.value)}
               />
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1">Stok</label>
               <input
-                type="number"
-                required
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-xl bg-white text-slate-900"
-                value={stock}
-                onChange={(e) => setStock(e.target.value)}
+                type="number" required
+                className="w-full px-4 py-2.5 border rounded-xl bg-white text-slate-900"
+                value={stock} onChange={(e) => setStock(e.target.value)}
               />
             </div>
           </div>
@@ -187,10 +165,8 @@ export default function EditProductPage() {
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1">Kategori Produk</label>
             <select
-              required
-              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl bg-white text-slate-900"
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
+              required className="w-full px-4 py-2.5 border rounded-xl bg-white text-slate-900"
+              value={categoryId} onChange={(e) => setCategoryId(e.target.value)}
             >
               <option value="">-- Pilih Kategori Kue --</option>
               {categories.map((cat) => (
@@ -204,30 +180,26 @@ export default function EditProductPage() {
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-1">Deskripsi Kue</label>
             <textarea
-              required
-              rows={3}
-              className="w-full px-4 py-2.5 border border-slate-300 rounded-xl bg-white text-slate-900"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              required rows={3}
+              className="w-full px-4 py-2.5 border rounded-xl bg-white text-slate-900"
+              value={description} onChange={(e) => setDescription(e.target.value)}
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Ganti Foto Produk (Kosongkan jika tidak ingin diubah)</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Foto Kue (Biarkan kosong jika tidak ingin diubah)</label>
             <input
-              type="file"
-              accept="image/*"
-              className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              type="file" accept="image/*"
+              className="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-blue-50"
               onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)}
             />
           </div>
 
           <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition disabled:bg-blue-300"
+            type="submit" disabled={loading}
+            className="w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition"
           >
-            {loading ? "Sedang Memperbarui di Server..." : "Simpan Perubahan Produk"}
+            {loading ? "Memperbarui data..." : "Simpan Perubahan Produk"}
           </button>
         </form>
       </div>

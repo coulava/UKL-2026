@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 export default function RegisterPage() {
-  const [name, setName] = useState<string>((""));
-  const [email, setEmail] = useState<string>(""); // Menggunakan email/gmail baku
+  const [name, setName] = useState<string>("");
+  const [email, setEmail] = useState<string>(""); 
   const [phone, setPhone] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
@@ -68,57 +68,75 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="w-full h-dvh flex bg-blue-300 justify-center items-center">
-      <div className="bg-slate-100 text-gray-700 rounded-2xl w-full md:w-1/2 lg:w-1/3 p-5">
-        <h1 className="font-bold text-2xl text-center p-2">Register</h1>
-        <form onSubmit={handleSubmit}>
-          <input
-            type="text"
-            placeholder="Full Name"
-            className="w-full p-5 border rounded-full mb-4 focus:outline-blue-400"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            disabled={loading}
-          />
-          <input
-            type="email"
-            placeholder="Email Address (Gmail)"
-            className="w-full p-5 border rounded-full mb-4 focus:outline-blue-400"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            disabled={loading}
-          />
-          <input
-            type="text"
-            placeholder="Phone Number"
-            className="w-full p-5 border rounded-full mb-4 focus:outline-blue-400"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            required
-            disabled={loading}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            className="w-full p-5 border rounded-full mb-4 focus:outline-blue-400"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            disabled={loading}
-          />
+    <div className="w-full min-h-screen flex bg-blue-200 justify-center items-center px-4 py-8 antialiased">
+      <div className="bg-slate-100 text-gray-700 rounded-3xl w-full sm:w-10/12 md:w-8/12 lg:w-5/12 xl:w-4/12 p-6 sm:p-8 shadow-xl transition-all duration-300">
+        <h1 className="font-black text-2xl text-center text-slate-900 tracking-tight mb-6">Create Account</h1>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold mb-1.5 text-gray-600 uppercase tracking-wide">Full Name</label>
+            <input
+              type="text"
+              placeholder="Masukkan nama lengkap"
+              className="w-full p-4 text-xs border border-slate-200 bg-white text-slate-900 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              disabled={loading}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold mb-1.5 text-gray-600 uppercase tracking-wide">Email Address (Gmail)</label>
+            <input
+              type="email"
+              placeholder="contoh@gmail.com"
+              className="w-full p-4 text-xs border border-slate-200 bg-white text-slate-900 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              disabled={loading}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold mb-1.5 text-gray-600 uppercase tracking-wide">Phone Number</label>
+            <input
+              type="text"
+              placeholder="Contoh: 08123456789"
+              className="w-full p-4 text-xs border border-slate-200 bg-white text-slate-900 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              required
+              disabled={loading}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold mb-1.5 text-gray-600 uppercase tracking-wide">Password</label>
+            <input
+              type="password"
+              placeholder="Masukkan password baru"
+              className="w-full p-4 text-xs border border-slate-200 bg-white text-slate-900 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              disabled={loading}
+            />
+          </div>
+
           <button
             type="submit"
             disabled={loading}
-            className="w-full p-5 border rounded-full text-center text-white font-bold bg-blue-500 cursor-pointer hover:bg-blue-600 disabled:bg-blue-300"
+            className="w-full p-4 mt-2 border-none rounded-full text-center text-white text-xs font-bold bg-blue-500 hover:bg-blue-600 transition-all duration-200 shadow-md cursor-pointer disabled:bg-blue-300 disabled:cursor-not-allowed active:scale-[0.99]"
           >
-            {loading ? "Registering..." : "Register"}
+            {loading ? "Registering..." : "Register Account"}
           </button>
           
-          <div className="flex justify-center items-center mt-4">
-            <Link href="/login" className="text-blue-500 underline text-sm hover:text-blue-600">
-              Have an account? Sign In
+          <div className="flex justify-center items-center gap-1 mt-6 text-xs font-medium text-slate-500">
+            <span>Have an account?</span>
+            <Link href="/login" className="text-blue-600 font-bold hover:underline transition-all">
+              Sign In
             </Link>
           </div>
         </form>

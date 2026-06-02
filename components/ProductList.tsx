@@ -134,10 +134,8 @@ export default function ProductList() {
             {filteredProducts.map((product) => {
               const numPrice = typeof product.price === 'string' ? parseInt(product.price.replace(/[^0-9]/g, '')) : product.price;
               
-              // 🎯 FORMULA FIX GAMBAR: Menggabungkan base URL dengan path relatif dari Postman
-              const imageUrl = product.image
-                ? `${process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "")}${product.image}`
-                : "";
+              // 🎯 FIXED: Membaca langsung string URL utuh dari Cloudinary database backend kamu
+              const imageUrl = product.image || "";
 
               return (
                 <div key={product.id} className="bg-white border border-slate-200/60 rounded-2xl shadow-sm overflow-hidden flex flex-col justify-between">
@@ -150,7 +148,7 @@ export default function ProductList() {
                           alt={product.name}
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            e.currentTarget.src = "https://placehold.co/600x400?text=Gambar+Rusak";
+                            e.currentTarget.src = "https://placehold.co/600x400?text=Gambar+Kue";
                           }}
                         />
                       ) : (
@@ -228,16 +226,14 @@ export default function ProductList() {
                 {filteredProducts.map((product) => {
                   const numPrice = typeof product.price === 'string' ? parseInt(product.price.replace(/[^0-9]/g, '')) : product.price;
                   
-                  // 🎯 FORMULA FIX GAMBAR LAPTOP
-                  const imageUrl = product.image
-                    ? `${process.env.NEXT_PUBLIC_BASE_URL?.replace(/\/$/, "")}${product.image}`
-                    : "";
+                  // 🎯 FIXED: Membaca langsung string URL utuh dari Cloudinary database backend kamu
+                  const imageUrl = product.image || "";
 
                   return (
                     <tr key={product.id} className="hover:bg-slate-50/40 transition-all align-middle">
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-5">
-                          {/* Bingkai lingkaran/kotak foto */}
+                          {/* Bingkai wadah foto */}
                           <div className="relative w-20 h-20 border border-slate-100 rounded-2xl overflow-hidden shrink-0 flex items-center justify-center bg-slate-50 shadow-sm">
                             {product.image ? (
                               <img 
@@ -245,8 +241,7 @@ export default function ProductList() {
                                 alt={product.name}
                                 className="w-full h-full object-cover"
                                 onError={(e) => {
-                                  // Fallback pengaman lapis kedua jika server gagal di-ping
-                                  e.currentTarget.src = `https://daily-bake-production.up.railway.app/${product.image?.replace(/^\//, "")}`;
+                                  e.currentTarget.src = "https://placehold.co/600x400?text=Gambar+Kue";
                                 }}
                               />
                             ) : (

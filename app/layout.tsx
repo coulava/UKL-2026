@@ -1,27 +1,33 @@
-import { Inter } from "next/font/google"
-import "./globals.css"
-import { Toaster } from "sonner" 
+import type { Metadata } from "next";
+// 1. Impor font Plus Jakarta Sans dari Google
+import { Plus_Jakarta_Sans } from "next/font/google"; 
+import "./globals.css";
+import { Toaster } from "sonner"; // jika Anda pakai sonner toast
 
-const inter = Inter({
+// 2. Konfigurasi font dan subset-nya
+const jakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  variable: "--font-sans",
-})
+  variable: "--font-jakarta", // Membuat CSS variable baru
+  display: "swap",
+});
+
+export const metadata: Metadata = {
+  title: "Bakery Shop System",
+  description: "Aplikasi Oven Kue Terbaik",
+};
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode
-}) {
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} font-sans antialiased text-slate-800 bg-slate-50`}>
-        
-        {/* Children murni tanpa gangguan wrapper global */}
-        {children} 
-        
-        {/* Toaster notifikasi sukses/gagal */}
+      {/* 3. Masukkan class font ke dalam bodi */}
+      <body className={`${jakartaSans.className} antialiased bg-gray-50 text-black`}>
+        {children}
         <Toaster richColors position="top-center" />
       </body>
     </html>
-  )
+  );
 }

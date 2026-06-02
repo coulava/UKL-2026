@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
-// Interface sesuai struktur skema data dari Postman
 interface DashboardSummary {
   totalRevenue: number;
   totalOrders: number;
@@ -11,7 +11,7 @@ interface DashboardSummary {
 }
 
 interface OrderReport {
-  id: string;
+  id: string | number;
   invoiceNumber: string;
   customerName: string;
   totalAmount: number;
@@ -23,87 +23,109 @@ export default function ReportsPage() {
   const [loadingSummary, setLoadingSummary] = useState(true);
   const [loadingOrders, setLoadingOrders] = useState(false);
   
-  // State Data
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [orders, setOrders] = useState<OrderReport[]>([]);
 
-  // State Filter Query Params (Sesuai parameter image_c3ea02.png)
+  // State Filter Query Params
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [status, setStatus] = useState("BAKING"); // Default filter status dari gambar
+  const [status, setStatus] = useState("BAKING");
 
-  // 1. Fetch Ringkasan Dashboard (Endpoint: /reports/dashboard)
-  useEffect(() => {
-    const fetchSummary = async () => {
-      try {
-        setLoadingSummary(true);
-        // Integrasi API Backend Anda:
-        // const token = localStorage.getItem("token");
-        // const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/reports/dashboard`, {
-        //   headers: { Authorization: `Bearer ${token}` }
-        // });
-        // const data = await res.json();
-        
-        // Data Simulasi Representatif
-        const dummySummary: DashboardSummary = {
-          totalRevenue: 4850000,
-          totalOrders: 142,
-          totalProductsSold: 389,
-          totalCustomers: 64,
-        };
-        setSummary(dummySummary);
-      } catch (error) {
-        console.error("Gagal memuat ringkasan laporan:", error);
-      } finally {
-        setLoadingSummary(false);
+  // 1. FETCH RINGKASAN DATA RIIL DARI BACKEND
+  const fetchSummaryData = async () => {
+    try {
+      setLoadingSummary(true);
+      const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
+
+      // Mengambil data ringkasan langsung dari endpoint reports dashboard kamu
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/reports/dashboard`, {
+        method: "GET",
+        headers: { 
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      });
+
+      const responseData = await res.json();
+
+      if (res.ok) {
+        // Mapping data riil dari backend (antisipasi jika dibungkus .data atau langsung objek)
+        const dataRiil = responseData.data || responseData;
+        setSummary({
+          totalRevenue: Number(dataRiil.totalRevenue || 0),
+          totalOrders: Number(dataRiil.totalOrders || 0),
+          totalProductsSold: Number(dataRiil.totalProductsSold || 0),
+          totalCustomers: Number(dataRiil.totalCustomers || 0),
+        });
+      } else {
+        console.error("Gagal memuat ringkasan:", responseData.message);
       }
-    };
+    } catch (error) {
+      console.error("Gagal memuat ringkasan laporan:", error);
+    } finally {
+      setLoadingSummary(false);
+    }
+  };
 
-    fetchSummary();
-    handleFetchFilteredOrders(); // Muat data tabel pertama kali
-  }, []);
-
-  // 2. Fetch Laporan Transaksi dengan Filter (Endpoint: /reports/orders)
+  // 2. FETCH DATA TABEL RIIL BERDASARKAN FILTER QUERY
   const handleFetchFilteredOrders = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     try {
       setLoadingOrders(true);
+      const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
       
-      // Penyusunan Query Params sesuai Postman Anda:
+      // Susun query parameters secara dinamis
       const params = new URLSearchParams();
       if (startDate) params.append("startDate", startDate);
       if (endDate) params.append("endDate", endDate);
       if (status) params.append("status", status);
 
-      // Integrasi API Backend Anda:
-      // const token = localStorage.getItem("token");
-      // const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/reports/orders?${params.toString()}`, {
-      //   headers: { Authorization: `Bearer ${token}` }
-      // });
-      // const data = await res.json();
-
-      // Data Simulasi Representatif sesuai filter baku
-      const dummyOrders: OrderReport[] = [
-        { id: "1", invoiceNumber: "INV-2026-001", customerName: "Agnes", totalAmount: 125000, status: "BAKING", createdAt: "2026-06-01" },
-        { id: "2", invoiceNumber: "INV-2026-002", customerName: "coulava", totalAmount: 85000, status: "BAKING", createdAt: "2026-06-02" },
-        { id: "3", invoiceNumber: "INV-2026-003", customerName: "Mala", totalAmount: 210000, status: "DONE", createdAt: "2026-05-28" },
-      ];
-
-      // Saring data lokal jika menggunakan mockup simulasi
-      const filteredResult = dummyOrders.filter(order => {
-        if (status && order.status !== status) return false;
-        return true;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/orders?${params.toString()}`, {
+        method: "GET",
+        headers: { 
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
       });
 
-      setOrders(filteredResult);
+      const responseData = await res.json();
+
+      if (res.ok) {
+        const rawOrders = responseData.data || responseData || [];
+        
+        // Transformasikan data backend agar pas dengan kolom tabel UI kamu
+        const mappedOrders: OrderReport[] = rawOrders.map((item: any) => {
+          // Buat format nomor invoice tiruan jika backend tidak menyediakannya langsung
+          const invoiceTiruan = `INV-${new Date(item.createdAt).getFullYear()}-${String(item.id).padStart(3, '0')}`;
+          
+          return {
+            id: item.id,
+            invoiceNumber: item.invoiceNumber || invoiceTiruan,
+            customerName: item.user?.name || item.customerName || "Pelanggan Anonim",
+            totalAmount: Number(item.totalAmount || item.price || 0),
+            status: item.status || "PENDING",
+            createdAt: item.createdAt ? new Date(item.createdAt).toLocaleDateString("id-ID") : "-"
+          };
+        });
+
+        setOrders(mappedOrders);
+      } else {
+        toast.error(responseData.message || "Gagal menyaring data transaksi.");
+      }
     } catch (error) {
       console.error("Gagal memuat daftar transaksi laporan:", error);
+      toast.error("Terjadi gangguan koneksi data.");
     } finally {
       setLoadingOrders(false);
     }
   };
 
-  // Fungsi utilitas format rupiah text
+  // Pemicu awal data saat halaman dirender
+  useEffect(() => {
+    fetchSummaryData();
+    handleFetchFilteredOrders();
+  }, []);
+
   const formatRupiah = (num: number) => {
     return "Rp " + num.toLocaleString("id-ID");
   };
@@ -118,7 +140,7 @@ export default function ReportsPage() {
         </p>
       </div>
 
-      {/* SECTION 1: RINGKASAN DATA (CARDS) */}
+      {/* SECTION 1: RINGKASAN DATA RIIL (CARDS) */}
       {loadingSummary ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
           {[...Array(4)].map((_, i) => (
@@ -127,22 +149,18 @@ export default function ReportsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {/* Card Pendapatan */}
           <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex flex-col justify-between">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Pendapatan</span>
             <h3 className="text-xl font-black text-slate-800 mt-2">{summary ? formatRupiah(summary.totalRevenue) : "Rp 0"}</h3>
           </div>
-          {/* Card Pesanan */}
           <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex flex-col justify-between">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Jumlah Pesanan</span>
             <h3 className="text-xl font-black text-slate-800 mt-2">{summary?.totalOrders} Transaksi</h3>
           </div>
-          {/* Card Produk Terjual */}
           <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex flex-col justify-between">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Kue Terjual</span>
             <h3 className="text-xl font-black text-slate-800 mt-2">{summary?.totalProductsSold} Pcs</h3>
           </div>
-          {/* Card Pelanggan */}
           <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex flex-col justify-between">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Pelanggan Aktif</span>
             <h3 className="text-xl font-black text-slate-800 mt-2">{summary?.totalCustomers} Pengguna</h3>
@@ -150,14 +168,13 @@ export default function ReportsPage() {
         </div>
       )}
 
-      {/* SECTION 2: FORM FILTER TRANSAKSI (Sesuai Parameter Postman) */}
+      {/* SECTION 2: FORM FILTER TRANSAKSI */}
       <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
         <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-4">
           ⚙️ Filter Laporan Transaksi
         </span>
         
         <form onSubmit={handleFetchFilteredOrders} className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
-          {/* Tanggal Mulai */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-slate-500">Tanggal Mulai</label>
             <input 
@@ -168,7 +185,6 @@ export default function ReportsPage() {
             />
           </div>
 
-          {/* Tanggal Selesai */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-slate-500">Tanggal Selesai</label>
             <input 
@@ -179,13 +195,12 @@ export default function ReportsPage() {
             />
           </div>
 
-          {/* Status Pesanan */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-slate-500">Status Transaksi</label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none font-medium text-slate-700 transition-all"
+              className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none font-medium text-slate-700 transition-all cursor-pointer"
             >
               <option value="PENDING">PENDING</option>
               <option value="BAKING">BAKING (Proses Oven)</option>
@@ -194,10 +209,9 @@ export default function ReportsPage() {
             </select>
           </div>
 
-          {/* Tombol Terapkan */}
           <button
             type="submit"
-            className="w-full text-xs font-bold uppercase tracking-wider bg-amber-400 hover:bg-amber-500 text-white py-2.5 px-4 rounded-lg transition-colors shadow-sm shadow-amber-400/10"
+            className="w-full text-xs font-bold uppercase tracking-wider bg-sky-400 hover:bg-sky-500 text-white py-2.5 px-4 rounded-lg transition-colors shadow-sm cursor-pointer"
           >
             Cari Laporan
           </button>
@@ -241,7 +255,7 @@ export default function ReportsPage() {
                         order.status === "DONE" 
                           ? "bg-emerald-50 text-emerald-700" 
                           : order.status === "BAKING" 
-                          ? "bg-amber-50 text-amber-700" 
+                          ? "bg-sky-50 text-sky-700" 
                           : "bg-slate-100 text-slate-600"
                       }`}>
                         ● {order.status}
