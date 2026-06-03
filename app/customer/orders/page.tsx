@@ -164,7 +164,7 @@ export default function CustomerOrdersPage() {
                     </div>
                     {order.totalPrice != null && (
                       <div className="text-left sm:text-right shrink-0">
-                        <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">Total Tagihan</span>
+                        <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">Total </span>
                         <span className="font-black text-blue-600 text-sm whitespace-nowrap block">
                           Rp {order.totalPrice.toLocaleString("id-ID")}
                         </span>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
-// Interface sesuai struktur skema data dari Postman
+// Interface sesuai skema data riil dari backend terbarumu
 interface DashboardSummary {
   totalRevenue: number;
   totalOrders: number;
@@ -12,61 +12,36 @@ interface DashboardSummary {
 }
 
 interface OrderReport {
-  id: string;
-  invoiceNumber: string;
-  customerName: string;
-  totalAmount: number;
+  id: number;
+  orderCode: string;
+  recipientName: string;
+  totalPrice: string | number;
   status: string;
   createdAt: string;
+  customer?: {
+    name: string;
+    email: string;
+  };
 }
 
-export default function ReportsPage() {
-  const [loadingSummary, setLoadingSummary] = useState(true);
-  const [loadingOrders, setLoadingOrders] = useState(false);
+export default function BakerReportsPage() {
+  const [loadingOrders, setLoadingOrders] = useState(true);
   
-  // State Data Real dari Backend
+  // State Utama (Summary Cards & Tabel List)
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [orders, setOrders] = useState<OrderReport[]>([]);
 
-  // State Filter Query Params 
+  // State Filter Query Params
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [status, setStatus] = useState("BAKING"); 
+  const [status, setStatus] = useState(""); // Default "" untuk load semua data status di awal
 
-  // 1. Fetch Ringkasan Dashboard (Endpoint: /reports/dashboard)
+  // Muat data laporan pertama kali saat halaman diakses
   useEffect(() => {
-    const fetchSummary = async () => {
-      try {
-        setLoadingSummary(true);
-        const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
-        const base = process.env.NEXT_PUBLIC_BASE_URL;
-
-        const res = await fetch(`${base}/reports/dashboard`, {
-          method: "GET",
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
-          }
-        });
-
-        if (!res.ok) throw new Error(`Status error: ${res.status}`);
-        const responseData = await res.json();
-        
-        // Membaca data jika dibungkus .data atau langsung objek utama
-        setSummary(responseData.data || responseData || null);
-      } catch (error) {
-        console.error("Gagal memuat ringkasan laporan:", error);
-        toast.error("Gagal mengambil data ringkasan dashboard.");
-      } finally {
-        setLoadingSummary(false);
-      }
-    };
-
-    fetchSummary();
-    handleFetchFilteredOrders(); // Muat data tabel pertama kali saat komponen mount
+    handleFetchFilteredOrders();
   }, []);
 
-  // 2. Fetch Laporan Transaksi dengan Filter (Endpoint: /reports/orders)
+  // Ambil Data Laporan & Sinkronisasi dengan Dashboard Summary murni dari Backend
   const handleFetchFilteredOrders = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     try {
@@ -91,11 +66,31 @@ export default function ReportsPage() {
       if (!res.ok) throw new Error(`Status error: ${res.status}`);
       const responseData = await res.json();
       
-      const list: OrderReport[] = responseData.data || responseData.orders || responseData || [];
-      setOrders(Array.isArray(list) ? list : []);
+      // 1. Simpan array list orders dari backend ke state
+      const list: OrderReport[] = responseData.orders || [];
+      setOrders(list);
+
+      // 2. Deteksi pelanggan unik dari list order yang masuk
+      let hitungPelangganUnik = new Set();
+      if (Array.isArray(list)) {
+        list.forEach((order: any) => {
+          if (order.customerId) {
+            hitungPelangganUnik.add(order.customerId);
+          }
+        });
+      }
+
+      // 3. Masukkan data summary menggunakan properti baru dari Backend (Termasuk totalItemsSold)
+      setSummary({
+        totalRevenue: Number(responseData.totalRevenue) || 0,
+        totalOrders: Number(responseData.totalOrders) || 0,
+        totalProductsSold: Number(responseData.totalItemsSold) || 0, // Menggunakan properti baru BE
+        totalCustomers: hitungPelangganUnik.size || 0,
+      });
+
     } catch (error) {
-      console.error("Gagal memuat daftar transaksi laporan:", error);
-      toast.error("Gagal memuat data filter transaksi.");
+      console.error("Gagal memuat laporan internal dapur:", error);
+      toast.error("Gagal sinkronisasi data laporan dengan server.");
     } finally {
       setLoadingOrders(false);
     }
@@ -109,14 +104,14 @@ export default function ReportsPage() {
     <div className="max-w-6xl mx-auto space-y-8 antialiased">
       {/* HEADER HALAMAN */}
       <div>
-        <h1 className="text-2xl font-black text-slate-800 tracking-tight">Laporan Toko DailyBake</h1>
+        <h1 className="text-2xl font-black text-slate-800 tracking-tight">Laporan Keuangan & Produksi Baker</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Pantau omzet pendapatan, total penjualan kue, dan filter riwayat transaksi pesanan secara real-time.
+          Pantau omzet pendapatan toko, total kue terjual, beserta filter status pesanan harian.
         </p>
       </div>
 
       {/* SECTION 1: RINGKASAN DATA (CARDS) */}
-      {loadingSummary ? (
+      {loadingOrders ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
           {[...Array(4)].map((_, i) => (
             <div key={i} className="h-24 bg-slate-100 rounded-xl border border-slate-100" />
@@ -147,10 +142,10 @@ export default function ReportsPage() {
         </div>
       )}
 
-      {/* SECTION 2: FORM FILTER TRANSAKSI */}
+      {/* SECTION 2: FORM FILTER LAPORAN */}
       <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm">
         <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-4">
-          ⚙️ Filter Laporan Transaksi
+          ⚙️ Filter Parameter Laporan
         </span>
         
         <form onSubmit={handleFetchFilteredOrders} className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
@@ -184,6 +179,7 @@ export default function ReportsPage() {
               onChange={(e) => setStatus(e.target.value)}
               className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none font-medium text-slate-700 transition-all cursor-pointer"
             >
+              <option value="">SEMUA STATUS</option>
               <option value="PENDING">PENDING</option>
               <option value="CONFIRMED">CONFIRMED</option>
               <option value="BAKING">BAKING (Proses Oven)</option>
@@ -196,14 +192,14 @@ export default function ReportsPage() {
           {/* Tombol Terapkan */}
           <button
             type="submit"
-            className="w-full text-xs font-bold uppercase tracking-wider bg-sky-400 hover:bg-sky-500 text-white py-2.5 px-4 rounded-lg transition-colors shadow-sm shadow-sky-400/10 cursor-pointer active:scale-[0.98]"
+            className="w-full text-xs font-bold uppercase tracking-wider bg-sky-500 hover:bg-sky-600 text-white py-2.5 px-4 rounded-lg transition-colors shadow-sm cursor-pointer active:scale-[0.98]"
           >
             Cari Laporan
           </button>
         </form>
       </div>
 
-      {/* SECTION 3: TABEL LAPORAN HASIL FILTER */}
+      {/* SECTION 3: TABEL DATA TRANSAKSI MASUK */}
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -213,47 +209,47 @@ export default function ReportsPage() {
                 <th className="px-6 py-4">Nama Pelanggan</th>
                 <th className="px-6 py-4">Tanggal Pesan</th>
                 <th className="px-6 py-4">Status</th>
-                <th className="px-6 py-4 text-right">Total Tagihan</th>
+                <th className="px-6 py-4 text-right">Total </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
               {loadingOrders ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-slate-400 text-xs animate-pulse font-medium">
-                    🔄 Mengekstrak data transaksi dari database server...
+                  <td colSpan={5} className="px-6 py-8 text-center text-slate-400 text-xs font-medium">
+                    🔄 Sinkronisasi database transaksi dapur...
                   </td>
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-6 py-8 text-center text-slate-400 text-xs font-medium">
-                    📭 Tidak ditemukan data transaksi untuk kriteria filter ini.
+                    📭 Tidak ada data pesanan pada kriteria filter ini.
                   </td>
                 </tr>
               ) : (
                 orders.map((order) => (
                   <tr key={order.id} className="hover:bg-slate-50/40 transition-colors">
                     <td className="px-6 py-4 font-mono text-xs font-bold text-slate-700">
-                      {order.invoiceNumber || `INV-#${order.id}`}
+                      {order.orderCode || `INV-#${order.id}`}
                     </td>
                     <td className="px-6 py-4 font-semibold text-slate-800">
-                      {order.customerName || "Customer Baker"}
+                      {order.recipientName || order.customer?.name || "Customer Baker"}
                     </td>
                     <td className="px-6 py-4 text-xs text-slate-500">
                       {order.createdAt ? new Date(order.createdAt).toLocaleDateString("id-ID") : "-"}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                        order.status === "COMPLETED" || order.status === "DONE"
+                        order.status === "COMPLETED"
                           ? "bg-emerald-50 text-emerald-700" 
-                          : order.status === "BAKING" || order.status === "CONFIRMED"
+                          : order.status === "BAKING" || order.status === "CONFIRMED" || order.status === "READY"
                           ? "bg-sky-50 text-sky-700" 
-                          : "bg-slate-100 text-slate-600"
+                          : "bg-rose-50 text-rose-700"
                       }`}>
                         ● {order.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right font-bold text-slate-800">
-                      {formatRupiah(order.totalAmount)}
+                      {formatRupiah(Number(order.totalPrice))}
                     </td>
                   </tr>
                 ))

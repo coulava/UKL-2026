@@ -176,7 +176,7 @@ export default function AdminCategories() {
             <div className="bg-white p-5 md:p-6 rounded-[20px] border border-slate-100 shadow-sm space-y-4">
               <div>
                 <h2 className="text-base font-bold text-slate-900">Buat Kategori Baru</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Kelompokkan produk kuemu agar lebih rapi.</p>
+                <p className="text-xs text-slate-400 mt-0.5">Kelompokkan produk kue mu agar lebih rapi.</p>
               </div>
               
               <form onSubmit={handleCreateCategory} className="space-y-4">

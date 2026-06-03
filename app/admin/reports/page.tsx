@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
+// Interface disesuaikan pas dengan struktur baru backend
 interface DashboardSummary {
   totalRevenue: number;
   totalOrders: number;
@@ -11,127 +12,96 @@ interface DashboardSummary {
 }
 
 interface OrderReport {
-  id: string | number;
-  invoiceNumber: string;
-  customerName: string;
-  totalAmount: number;
+  id: number;
+  orderCode: string;
+  recipientName: string;
+  totalPrice: string | number;
   status: string;
   createdAt: string;
+  customer?: {
+    name: string;
+    email: string;
+  };
 }
 
 export default function ReportsPage() {
-  const [loadingSummary, setLoadingSummary] = useState(true);
-  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [loadingOrders, setLoadingOrders] = useState(true);
   
+  // State Laporan Utama
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [orders, setOrders] = useState<OrderReport[]>([]);
 
   // State Filter Query Params
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [status, setStatus] = useState("BAKING");
+  const [status, setStatus] = useState(""); // Default kosong untuk load semua status di awal
 
-  // 1. FETCH RINGKASAN DATA RIIL DARI BACKEND
-  const fetchSummaryData = async () => {
-    try {
-      setLoadingSummary(true);
-      const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
+  // Muat data laporan pertama kali saat komponen mount
+  useEffect(() => {
+    handleFetchFilteredOrders();
+  }, []);
 
-      // Mengambil data ringkasan langsung dari endpoint reports dashboard kamu
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/reports/dashboard`, {
-        method: "GET",
-        headers: { 
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        }
-      });
-
-      const responseData = await res.json();
-
-      if (res.ok) {
-        // Mapping data riil dari backend (antisipasi jika dibungkus .data atau langsung objek)
-        const dataRiil = responseData.data || responseData;
-        setSummary({
-          totalRevenue: Number(dataRiil.totalRevenue || 0),
-          totalOrders: Number(dataRiil.totalOrders || 0),
-          totalProductsSold: Number(dataRiil.totalProductsSold || 0),
-          totalCustomers: Number(dataRiil.totalCustomers || 0),
-        });
-      } else {
-        console.error("Gagal memuat ringkasan:", responseData.message);
-      }
-    } catch (error) {
-      console.error("Gagal memuat ringkasan laporan:", error);
-    } finally {
-      setLoadingSummary(false);
-    }
-  };
-
-  // 2. FETCH DATA TABEL RIIL BERDASARKAN FILTER QUERY
+  // Fetch Laporan Transaksi & Sinkronisasi Summary Card
   const handleFetchFilteredOrders = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     try {
       setLoadingOrders(true);
       const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
+      const base = process.env.NEXT_PUBLIC_BASE_URL;
       
-      // Susun query parameters secara dinamis
+      // Penyusunan Query Params dinamis
       const params = new URLSearchParams();
       if (startDate) params.append("startDate", startDate);
       if (endDate) params.append("endDate", endDate);
       if (status) params.append("status", status);
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/orders?${params.toString()}`, {
+      const res = await fetch(`${base}/reports/orders?${params.toString()}`, {
         method: "GET",
         headers: { 
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json"
         }
       });
 
+      if (!res.ok) throw new Error(`Status error: ${res.status}`);
       const responseData = await res.json();
+      
+      // 1. Ambil list orders langsung dari property responseData.orders
+      const list: OrderReport[] = responseData.orders || [];
+      setOrders(list);
 
-      if (res.ok) {
-        const rawOrders = responseData.data || responseData || [];
-        
-        // Transformasikan data backend agar pas dengan kolom tabel UI kamu
-        const mappedOrders: OrderReport[] = rawOrders.map((item: any) => {
-          // Buat format nomor invoice tiruan jika backend tidak menyediakannya langsung
-          const invoiceTiruan = `INV-${new Date(item.createdAt).getFullYear()}-${String(item.id).padStart(3, '0')}`;
-          
-          return {
-            id: item.id,
-            invoiceNumber: item.invoiceNumber || invoiceTiruan,
-            customerName: item.user?.name || item.customerName || "Pelanggan Anonim",
-            totalAmount: Number(item.totalAmount || item.price || 0),
-            status: item.status || "PENDING",
-            createdAt: item.createdAt ? new Date(item.createdAt).toLocaleDateString("id-ID") : "-"
-          };
+      // 2. Deteksi jumlah pelanggan unik secara dinamis dari list yang tampil
+      let hitungPelangganUnik = new Set();
+      if (Array.isArray(list)) {
+        list.forEach((order: any) => {
+          if (order.customerId) {
+            hitungPelangganUnik.add(order.customerId);
+          }
         });
-
-        setOrders(mappedOrders);
-      } else {
-        toast.error(responseData.message || "Gagal menyaring data transaksi.");
       }
+
+      // 3. Pasang data summary murni menggunakan variabel baru dari Backend
+      setSummary({
+        totalRevenue: Number(responseData.totalRevenue) || 0,
+        totalOrders: Number(responseData.totalOrders) || 0,
+        totalProductsSold: Number(responseData.totalItemsSold) || 0, // 🔥 Menggunakan data instan BE!
+        totalCustomers: hitungPelangganUnik.size || 0,
+      });
+
     } catch (error) {
       console.error("Gagal memuat daftar transaksi laporan:", error);
-      toast.error("Terjadi gangguan koneksi data.");
+      toast.error("Gagal memuat data filter transaksi.");
     } finally {
       setLoadingOrders(false);
     }
   };
 
-  // Pemicu awal data saat halaman dirender
-  useEffect(() => {
-    fetchSummaryData();
-    handleFetchFilteredOrders();
-  }, []);
-
   const formatRupiah = (num: number) => {
-    return "Rp " + num.toLocaleString("id-ID");
+    return "Rp " + (num ?? 0).toLocaleString("id-ID");
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8">
+    <div className="max-w-6xl mx-auto space-y-8 antialiased">
       {/* HEADER HALAMAN */}
       <div>
         <h1 className="text-2xl font-black text-slate-800 tracking-tight">Laporan Toko DailyBake</h1>
@@ -140,30 +110,34 @@ export default function ReportsPage() {
         </p>
       </div>
 
-      {/* SECTION 1: RINGKASAN DATA RIIL (CARDS) */}
-      {loadingSummary ? (
+      {/* SECTION 1: RINGKASAN DATA (CARDS) */}
+      {loadingOrders ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-24 bg-slate-200/60 rounded-xl" />
+            <div key={i} className="h-24 bg-slate-100 rounded-xl border border-slate-100" />
           ))}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {/* Card Pendapatan */}
           <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex flex-col justify-between">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Pendapatan</span>
             <h3 className="text-xl font-black text-slate-800 mt-2">{summary ? formatRupiah(summary.totalRevenue) : "Rp 0"}</h3>
           </div>
+          {/* Card Pesanan */}
           <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex flex-col justify-between">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Jumlah Pesanan</span>
-            <h3 className="text-xl font-black text-slate-800 mt-2">{summary?.totalOrders} Transaksi</h3>
+            <h3 className="text-xl font-black text-slate-800 mt-2">{(summary?.totalOrders ?? 0)} Transaksi</h3>
           </div>
+          {/* Card Produk Terjual */}
           <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex flex-col justify-between">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Kue Terjual</span>
-            <h3 className="text-xl font-black text-slate-800 mt-2">{summary?.totalProductsSold} Pcs</h3>
+            <h3 className="text-xl font-black text-slate-800 mt-2">{(summary?.totalProductsSold ?? 0)} Pcs</h3>
           </div>
+          {/* Card Pelanggan */}
           <div className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex flex-col justify-between">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Pelanggan Aktif</span>
-            <h3 className="text-xl font-black text-slate-800 mt-2">{summary?.totalCustomers} Pengguna</h3>
+            <h3 className="text-xl font-black text-slate-800 mt-2">{(summary?.totalCustomers ?? 0)} Pengguna</h3>
           </div>
         </div>
       )}
@@ -175,6 +149,7 @@ export default function ReportsPage() {
         </span>
         
         <form onSubmit={handleFetchFilteredOrders} className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-end">
+          {/* Tanggal Mulai */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-slate-500">Tanggal Mulai</label>
             <input 
@@ -185,6 +160,7 @@ export default function ReportsPage() {
             />
           </div>
 
+          {/* Tanggal Selesai */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-slate-500">Tanggal Selesai</label>
             <input 
@@ -195,6 +171,7 @@ export default function ReportsPage() {
             />
           </div>
 
+          {/* Status Pesanan */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-slate-500">Status Transaksi</label>
             <select
@@ -202,16 +179,20 @@ export default function ReportsPage() {
               onChange={(e) => setStatus(e.target.value)}
               className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none font-medium text-slate-700 transition-all cursor-pointer"
             >
+              <option value="">SEMUA STATUS</option>
               <option value="PENDING">PENDING</option>
+              <option value="CONFIRMED">CONFIRMED</option>
               <option value="BAKING">BAKING (Proses Oven)</option>
-              <option value="DONE">DONE (Selesai)</option>
+              <option value="READY">READY (Siap Ambil)</option>
+              <option value="COMPLETED">COMPLETED (Selesai)</option>
               <option value="CANCELLED">CANCELLED</option>
             </select>
           </div>
 
+          {/* Tombol Terapkan */}
           <button
             type="submit"
-            className="w-full text-xs font-bold uppercase tracking-wider bg-sky-400 hover:bg-sky-500 text-white py-2.5 px-4 rounded-lg transition-colors shadow-sm cursor-pointer"
+            className="w-full text-xs font-bold uppercase tracking-wider bg-sky-400 hover:bg-sky-500 text-white py-2.5 px-4 rounded-lg transition-colors shadow-sm shadow-sky-400/10 cursor-pointer active:scale-[0.98]"
           >
             Cari Laporan
           </button>
@@ -234,34 +215,42 @@ export default function ReportsPage() {
             <tbody className="divide-y divide-slate-100 text-sm">
               {loadingOrders ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-slate-400 text-xs animate-pulse">
-                    Mengekstrak data transaksi dari database...
+                  <td colSpan={5} className="px-6 py-8 text-center text-slate-400 text-xs font-medium">
+                    🔄 Mengekstrak data transaksi dari database server...
                   </td>
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-slate-400 text-xs">
-                    Tidak ditemukan data transaksi untuk kriteria filter ini.
+                  <td colSpan={5} className="px-6 py-8 text-center text-slate-400 text-xs font-medium">
+                    📭 Tidak ditemukan data transaksi untuk kriteria filter ini.
                   </td>
                 </tr>
               ) : (
                 orders.map((order) => (
                   <tr key={order.id} className="hover:bg-slate-50/40 transition-colors">
-                    <td className="px-6 py-4 font-mono text-xs font-bold text-slate-700">{order.invoiceNumber}</td>
-                    <td className="px-6 py-4 font-semibold text-slate-800">{order.customerName}</td>
-                    <td className="px-6 py-4 text-xs text-slate-500">{order.createdAt}</td>
+                    <td className="px-6 py-4 font-mono text-xs font-bold text-slate-700">
+                      {order.orderCode || `INV-#${order.id}`}
+                    </td>
+                    <td className="px-6 py-4 font-semibold text-slate-800">
+                      {order.recipientName || order.customer?.name || "Customer Baker"}
+                    </td>
+                    <td className="px-6 py-4 text-xs text-slate-500">
+                      {order.createdAt ? new Date(order.createdAt).toLocaleDateString("id-ID") : "-"}
+                    </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                        order.status === "DONE" 
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                        order.status === "COMPLETED"
                           ? "bg-emerald-50 text-emerald-700" 
-                          : order.status === "BAKING" 
+                          : order.status === "BAKING" || order.status === "CONFIRMED" || order.status === "READY"
                           ? "bg-sky-50 text-sky-700" 
-                          : "bg-slate-100 text-slate-600"
+                          : "bg-rose-50 text-rose-700"
                       }`}>
                         ● {order.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right font-bold text-slate-800">{formatRupiah(order.totalAmount)}</td>
+                    <td className="px-6 py-4 text-right font-bold text-slate-800">
+                      {formatRupiah(Number(order.totalPrice))}
+                    </td>
                   </tr>
                 ))
               )}

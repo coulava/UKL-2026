@@ -85,16 +85,16 @@ export default function AdminDashboard() {
       {/* Statistik Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <span className="text-sm font-medium text-gray-400 uppercase tracking-wider">Total Pengguna Real</span>
+          <span className="text-sm font-medium text-gray-400 uppercase tracking-wider">Total Pengguna</span>
           <h3 className="text-3xl font-bold text-gray-800 mt-2">
             {apiStatus === "DISCONNECTED" ? "0" : loading ? "..." : users.length} Orang
           </h3>
         </div>
 
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <span className="text-sm font-medium text-gray-400 uppercase tracking-wider">Varian Kue Real</span>
+          <span className="text-sm font-medium text-gray-400 uppercase tracking-wider">Total Cake</span>
           <h3 className="text-3xl font-bold text-gray-800 mt-2">
-            {apiStatus === "DISCONNECTED" ? "0" : loading ? "..." : totalProducts} Jenis
+            {apiStatus === "DISCONNECTED" ? "0" : loading ? "..." : totalProducts} Cake
           </h3>
         </div>
 
