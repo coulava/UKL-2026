@@ -95,13 +95,6 @@ export default function LandingPage() {
             Nikmati kelembutan panggangan premium DailyBake dengan sistem pre-order yang transparan. Pesan hari ini, ambil dalam kondisi hangat besok!
           </p>
           <div className="pt-2 flex items-center gap-4">
-            {/* 🛠️ FIX 1: Tombol diaktifkan dan langsung masuk ke halaman dashboard etalase customer */}
-            <Link href="/customer/dashboard" className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-3.5 px-6 rounded-2xl transition shadow-md">
-              Mulai Pesan Kue 🚀
-            </Link>
-            <a href="#menu" className="text-xs font-bold text-slate-500 hover:text-slate-800 transition">
-              Lihat Menu Kami ↓
-            </a>
           </div>
         </div>
 
@@ -121,8 +114,8 @@ export default function LandingPage() {
       <section id="menu" className="bg-white py-20 px-6 border-y border-slate-100">
         <div className="max-w-6xl mx-auto">
           <div className="text-center space-y-2 mb-12">
-            <h2 className="text-2xl font-black text-slate-900">Menu Andalan Dapur</h2>
-            <p className="text-xs text-slate-400">Kue pilihan asli dari database dapur kami</p>
+            <h2 className="text-2xl font-black text-slate-900">Menu Best Seller </h2>
+            <p className="text-xs text-slate-400">Kue Best Seller dari Dailybake</p>
           </div>
 
           {loading ? (
