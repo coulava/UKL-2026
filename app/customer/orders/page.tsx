@@ -75,7 +75,6 @@ export default function CustomerOrdersPage() {
       
       console.log("=== DATA RIWAYAT ORDERS DARI BE ===", responseData);
 
-      // Mengambil array data (mendukung format wrapper object)
       const list: Order[] = responseData.data || responseData.orders || responseData || [];
       setOrders(Array.isArray(list) ? list : []);
     } catch (err: any) {
@@ -98,7 +97,6 @@ export default function CustomerOrdersPage() {
     }
   }
 
-  // Helper untuk melacak nama kue di dalam manifest item order
   const getCleanProductName = (item: OrderItem) => {
     if (item.product?.name) return item.product.name;
     if (item.productName) return item.productName;
@@ -210,7 +208,7 @@ export default function CustomerOrdersPage() {
                       {order.paymentMethod && <span className="flex items-center gap-1">💳 {order.paymentMethod}</span>}
                     </div>
                     <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${order.paymentStatus === "PAID" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-500"}`}>
-                      {order.paymentStatus === "PAID" ? "Lunas" : "Belum Lunas"}
+                      {order.paymentStatus === "PAID" ? "Paid" : "Unpaid"}
                     </span>
                   </div>
 
@@ -270,7 +268,7 @@ export default function CustomerOrdersPage() {
             {historyOrders.map((order) => {
               const info = STATUS_STYLE[order.status] || { badge: "bg-slate-50", label: order.status, dot: "bg-slate-400" };
               return (
-                <div key={order.id} className="bg-white border border-slate-200 hover:border-slate-300 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all duration-200">
+                <div key={order.id} className="bg-white border border-slate-200 hover:border-slate-300 rounded-xl p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all duration-200">
                   <div className="space-y-1 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-slate-800 text-sm">Order #{order.id}</span>
@@ -290,13 +288,14 @@ export default function CustomerOrdersPage() {
                     )}
                   </div>
 
-                  {order.totalPrice != null && (
-                    <div className="sm:text-right text-left border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100 shrink-0">
+                  {/* Kanan: Hanya menampilkan Harga Total */}
+                  <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-3 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100 shrink-0">
+                    {order.totalPrice != null && (
                       <span className="font-black text-slate-800 text-sm whitespace-nowrap block">
                         Rp {order.totalPrice.toLocaleString("id-ID")}
                       </span>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               );
             })}

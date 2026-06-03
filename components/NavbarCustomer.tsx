@@ -19,7 +19,7 @@ export default function NavbarCustomer() {
   const navItems = [
     { name: "Etalase Kue", slug: "/customer/dashboard" },
     { name: "Pesanan Saya", slug: "/customer/orders" },
-    { name: "Ulasan Kue", slug: "/customer/review" },
+  
   ];
 
   return (
